@@ -1,0 +1,36 @@
+name: Deploy with Git Affirm
+
+on:
+  # Trigger on events that would start a deployment
+  push:
+    branches: [main]
+  workflow_dispatch:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  check-and-deploy:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.merged == true
+    steps:
+      - name: Check for Positive Emoji PRs
+        id: git-affirm
+        uses: redhatsam09/git-affirm@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          days-to-check: 7
+          second-chance: true
+      
+      # Only proceed with deployment if check passes
+      - name: Deploy
+        if: steps.git-affirm.outputs.can-deploy == 'true'
+        run: |
+          # Your deployment steps here
+          echo "Deploying to production! 🚀"
+      
+      - name: Deployment Skipped
+        if: steps.git-affirm.outputs.can-deploy != 'true'
+        run: |
+          echo "Deployment was blocked because no PRs with positive emojis were merged recently."
+          exit 1
